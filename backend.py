@@ -5,7 +5,7 @@ import requests
 
 @dataclass
 class Backend:
-    url: ParseResult
+    url: str | ParseResult
     alive: bool = True
     _lock: RLock = field(default_factory=RLock)
     _session: requests.Session = field(default_factory=requests.Session)
