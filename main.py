@@ -4,7 +4,15 @@ from backend import Backend
 from pool import ServerPool
 
 class LoadBalancer(BaseHTTPRequestHandler):
+    """
+    A simple HTTP load balancer that distributes incoming requests
+    among a pool of backend servers using a round-robin algorithm.
+    """
     def do_GET(self):
+        """
+        Handles GET requests by forwarding them to an available backend server.
+        Also handles the /health endpoint for health checks.
+        """
         if self.path == '/health':
             self.health_check()
             return
@@ -28,9 +36,15 @@ class LoadBalancer(BaseHTTPRequestHandler):
             self.send_error(500, f"Internal Server Error: {e}")
 
     def do_POST(self):
+        """
+        Handles POST requests by calling do_GET.
+        """
         self.do_GET()
 
     def health_check(self):
+        """
+        Performs health checks on all registered backend servers.
+        """
         for backend in pool.backends:
             backend.health_check()
         self.send_response(200)
@@ -41,6 +55,9 @@ backends = [Backend(url="http://localhost:8081"), Backend(url="http://localhost:
 pool = ServerPool(backends=backends)
 
 def main():
+    """
+    Starts the load balancer server.
+    """
     server_address = ('', 8080)
     httpd = HTTPServer(server_address, LoadBalancer)
     print(f"Load balancer running on port {server_address[1]}...")
