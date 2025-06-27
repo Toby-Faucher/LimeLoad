@@ -4,8 +4,18 @@ A simple load balancer
 ## Performance Improvements
 - **Pre-parsed URLs**: The `Backend` class now pre-parses the URL and stores the base URL to avoid repeated parsing and string formatting during health checks and request proxying.
 
+## Current Objective List
+
+### Advanced Load Balancing Algorithms
+- [ ] Research and select specific advanced load balancing algorithms (e.g., Least Connections, Weighted Round Robin, IP Hash).
+- [ ] Design a common interface or abstract base class for new load balancing algorithms (e.g., `load_balancer/algorithms/base.py`).
+- [ ] Implement each selected algorithm as a separate class/module within `load_balancer/algorithms/` (e.g., `least_connections.py`, `weighted_round_robin.py`).
+- [ ] Modify the main load balancer logic (`main.py` or `pool.py`) to dynamically select and use the chosen algorithm.
+- [ ] Consider adding a configuration mechanism (e.g., a new `config.py` file or extending `main.py`'s argument parsing) to allow users to specify the desired algorithm.
+- [ ] Write comprehensive unit tests for each new load balancing algorithm to ensure correctness and cover edge cases (e.g., `tests/test_algorithms.py`).
+- [ ] Update the `README.md` with documentation on how to configure and use the new load balancing algorithms.
+
 ## Future Enhancements
-- **Advanced Load Balancing Algorithms**: Implement more sophisticated algorithms like Least Connections, Weighted Round Robin, or IP Hash.
 - **Dynamic Backend Management**: Allow adding/removing backends at runtime without restarting the load balancer.
 - **Asynchronous Operations**: Utilize `asyncio` for non-blocking I/O to handle more concurrent connections efficiently.
 - **Configuration File**: Externalize backend configurations into a file (e.g., YAML, JSON) for easier management.
