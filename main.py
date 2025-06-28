@@ -1,5 +1,4 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
-import requests
 from backend import Backend
 from pool import ServerPool
 
