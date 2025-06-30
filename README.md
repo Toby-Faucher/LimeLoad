@@ -1,5 +1,8 @@
-# LimeLoad
-A simple load balancer
+<h2 align="center">
+    LimeLoad 🍋‍🟩
+    <br>
+    LimeLoad: A *nano* load balancer 💚
+</h2>
 
 ## Performance Improvements
 - **Pre-parsed URLs**: The `Backend` class now pre-parses the URL and stores the base URL to avoid repeated parsing and string formatting during health checks and request proxying.
