@@ -153,3 +153,105 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
             True if server was removed, False if not found
         """
         pass
+
+    def update_sever_metrics(self, server_id: str, **metrics) -> bool:
+        """
+        Update metrics for a specific server.
+        
+        Args:
+            server_id: ID of the server to update
+            **metrics: Metric key-value pairs to update
+            
+        Returns:
+            True if server was found and updated, False otherwise
+        """
+        server = self.get_server(server_id)
+
+        if server:
+            server.update_metrics(**metrics)
+            self.on_server_metrics_updated(server)
+            return True
+        return False
+
+    def update_server_status(self, server_id: str, status: ServerStatus) -> bool:
+        """
+        Update the status of a specific server.
+        
+        Args:
+            server_id: ID of the server to update
+            status: New server status
+            
+        Returns:
+            True if server was found and updated, False otherwise
+        """
+        server = self.get_server(server_id)
+        if server:
+            old_status = server.status
+            server.status = status
+            self.on_server_status_updated(server, old_status, status)
+            return True
+        return False
+
+    def get_server(self, server_id: str) -> Optional[Server[ServerType]]:
+        """
+        Get a server by its ID.
+        
+        Args:
+            server_id: ID of the server to retrieve
+            
+        Returns:
+            Server instance or None if not found
+        """
+        for server in self.servers:
+            if server.id == server_id:
+                return server
+        return None
+
+    def get_healthy_servers(self) -> List[Server[ServerType]]:
+        """
+        Get list of healthy servers available for load balancing.
+        
+        Returns:
+            List of healthy servers
+        """
+        return [server for server in self.servers if server.is_available]
+
+    def get_server_count(self) -> int:
+        """ Get total number of servers in the pool"""
+        return len(self.servers)
+
+    def get_healthy_server_count(self) -> int:
+        """ Get total number of healthy servers in the pool"""
+        return len(self.get_healthy_servers())
+
+    def reset_statistics(self) -> None:
+        """Resets algo statistics"""
+        self.statistics = {
+                'total_requests': 0,
+                'successful_selections': 0,
+                'failed_selections': 0,
+                'last_reset': time.time(),
+        }
+        self.on_statistics_reset()
+
+    def get_statistics(self) -> Dict[str,Any]:
+        """
+        Get algorithm statistics.
+        
+        Returns:
+            Dictionary containing algorithm statistics        
+        """
+
+        stats = self.statistics.copy()
+        stats['success_rate'] = ( 
+                stats['successful_selections'] / max(stats['total_requests'], 1 )
+        )        
+        stats['algorithm_name'] = self.name
+        stats['server_count'] = self.get_server_count()
+        stats['healthy_server_count'] = self.get_healthy_server_count()
+        
+        return stats
+
+    #TODO: Hookaroonies
+
+
