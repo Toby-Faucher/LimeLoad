@@ -252,6 +252,114 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         
         return stats
 
-    #TODO: Hookaroonies
+    # Hooks
+
+    def on_server_added(self, server: Server[ServerType]) -> None:
+        """
+        Hook for when a server is added to the pool.
+
+        Args:
+            server: the server that was added
+        """
+        self.logger.info(f"Server {server.id} added to {self.name} algorithm")
+
+    def on_server_removed(self, server: Server[ServerType]) -> None:
+        """
+        Hook for when a server is removed from the pool.
+
+        Args:
+            server: the server that was removed
+        """
+        self.logger.info(f"Server {server.id} removed from {self.name} algorithm")
 
 
+    def on_server_selected(self, server: Server[ServerType], context: Optional[LoadBalancingContext]) -> None 
+        """
+        Hook for when a server is selected.
+
+        Args:
+            server: the server that was selected
+            context: Request context for the selection
+        """
+
+        self.statistics['total_requests'] += 1
+        self.statistics['successful_selections'] += 1
+        self.logger.info(f"Selected server {server.id} using {self.name} algorithm")
+
+    def on_selected_failed(self, context: Optional[LoadBalancingContext]) -> None 
+        """
+        Hook for when a server selection fails.
+
+        Args:
+            context: Request context for the selection
+        """
+
+        self.statistics['total_requests'] += 1
+        self.statistics['failed_selections'] += 1
+        self.logger.info(f"Server selection failed using {self.name} algorithm")
+
+    def on_server_status_updated(self, server: Server[ServerType], old_status: ServerStatus, new_status: ServerStatus) -> None:
+        """
+        Hook called when the server status is updated.
+
+       Args:
+           server: The server whose status updated
+           old_status: Previous server status
+           new_status: New server status
+        """
+        self.logger.info(f"Server {server.id} status updated to {new_status.value} from {old_status.value}")
+
+    def on_server_metrics_updated(self, server: Server[ServerType]]) -> None:
+        """
+        Hook called when a server's metrics are updated.
+        
+        Args:
+            server: The server whose metrics were updated
+        """
+        pass # override in subclass if needed
+
+    def on_statistics_reset(self) -> None:
+        """Hook for when the statistics are reset"""
+        
+        self.logger.info(f"Server statistics reset for {self.name} algorithm")
+
+    # Util methods
+
+    def _validate_server(self, server: Server[ServerType]) -> bool:
+        """
+        Validate server configuration.
+        
+        Args:
+            server: Server to validate
+            
+        Returns:
+            True if server is valid, False otherwise
+        """
+        if not server.id or not server.address or server.port <= 0:
+            return False
+        if server.weight < 0:
+            return False
+        return True
+
+    def _log_section(self, server: Optional[Server[ServerType]], context: Optional[LoadBalancingContext]) -> None:
+        """
+        Log the server selection result.
+        
+        Args:
+            server: Selected server (None if selection failed)
+            context: Request context
+        """
+        if server:
+            self.on_server_selected(server, context)
+        else:
+            self.on_selected_failed(context)
+
+    def __str__(self) -> str:
+        """String representation of the algorithm."""
+        return f"{self.name} (servers: {self.get_server_count()}, healthy: {self.get_healthy_server_count()})"
+
+    def __repr__(self) -> str:
+        """Detailed string representation of the algorithm."""
+        return (f"{self.__class__.__name__}(name='{self.name}', "
+                f"servers={self.get_server_count()},"
+                f"healthy={self.get_healthy_server_count()}")
