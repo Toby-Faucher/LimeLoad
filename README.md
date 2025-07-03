@@ -4,8 +4,34 @@
     LimeLoad: A *nano* load balancer 💚
 </h2>
 
-## Performance Improvements
-- **Pre-parsed URLs**: The `Backend` class now pre-parses the URL and stores the base URL to avoid repeated parsing and string formatting during health checks and request proxying.
+## TODO List
+
+### Core Infrastructure
+- [ ] **Configuration File**: Implement a YAML or JSON configuration file for settings, backends, and algorithm selection.
+- [ ] **Asynchronous Operations**: Convert the core engine to `asyncio` for non-blocking I/O and improved concurrency.
+- [ ] **Logging and Monitoring**: Integrate a structured logging library (e.g., `structlog`) and expose a `/metrics` endpoint for Prometheus scraping.
+- [ ] **Dynamic Backend Management**: Implement a REST API or a file-based watcher to add/remove backends at runtime.
+
+### Load Balancing Algorithms
+- [ ] **Weighted Round Robin**: Implement a weighted round-robin algorithm where servers with higher weights receive more requests.
+- [ ] **Least Connections**: Implement a least-connections algorithm that directs traffic to the server with the fewest active connections.
+- [ ] **IP Hash**: Implement an IP hash algorithm for session persistence, ensuring a client is consistently directed to the same server.
+- [ ] **Advanced Algorithm Integration**: Design the system to allow for the dynamic selection and chaining of multiple algorithms (e.g., weighted round-robin with a least-connections fallback).
+
+### Health Checks and Monitoring
+- [ ] **Customizable Health Checks**: Allow for user-defined health check endpoints, intervals, and protocols (e.g., TCP, ICMP).
+- [ ] **Circuit Breaker**: Implement a circuit breaker pattern to automatically eject unhealthy servers from the pool and gracefully re-introduce them when they recover.
+- [ ] **Server Metrics**: Enhance the `ServerMetrics` class to track more detailed performance data, such as success/failure rates, latency distribution, and throughput.
+
+### Security and Reliability
+- [ ] **HTTPS Support**: Add SSL/TLS termination to secure client-to-load-balancer communication.
+- [ ] **Rate Limiting**: Implement a rate-limiting mechanism to protect backend servers from traffic spikes.
+- [ ] **Request Timeouts**: Implement configurable timeouts for both client and backend connections to prevent long-running requests from hogging resources.
+
+### Testing and Documentation
+- [ ] **Comprehensive Unit Tests**: Write extensive unit tests for all new components, including each load balancing algorithm and the core infrastructure.
+- [ ] **Integration Tests**: Develop integration tests to verify the end-to-end functionality of the load balancer.
+- [ ] **Documentation**: Update the documentation to reflect the new features, architecture, and configuration options.
 
 ## Current Objective List
 
