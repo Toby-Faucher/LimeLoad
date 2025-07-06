@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 import time
 import logging
+import threading
 
 
 ServerType = TypeVar('ServerType')
@@ -117,6 +118,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
             'failed_selections': 0,
             'last_reset': time.time(),
         }
+        self._lock = threading.RLock()
 
     @abstractmethod
     def select_server(self, context: Optional[LoadBalancingContext] = None) -> Optional[Server[ServerType]]:
@@ -129,7 +131,13 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Returns:
             Selected Server or None if no servers are available
         """
-        pass
+        
+        with self._lock:
+            healthy = self.get_healthy_servers()
+            if not healthy:
+                return None
+            
+            #TODO: IMPLEMENT SELECTION LOGIC!!!
 
     @abstractmethod
     def add_server(self, server: Server[ServerType]) -> None:
@@ -139,9 +147,10 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Args:
             server: Server instance to add
         """
-        if self._validate_server(server):
-            self.servers[server.id] = server
-            self.on_server_added(server)
+        with self._lock:
+            if self._validate_server(server):
+                self.servers[server.id] = server
+                self.on_server_added(server)
     
     @abstractmethod
     def remove_server(self, server_id: str) -> bool:
@@ -154,11 +163,12 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Returns:
             True if server was removed, False if not found
         """
-        if server_id in self.servers:
-            del self.servers[server_id]
-            self.on_server_removed(server_id)
-            return True
-        return False
+        with self._lock:
+            if server_id in self.servers:
+                del self.servers[server_id]
+                self.on_server_removed(server_id)
+                return True
+            return False
 
     def update_sever_metrics(self, server_id: str, **metrics) -> bool:
         """

@@ -14,7 +14,7 @@ This list focuses exclusively on enhancing the `load_balancer/algorithms/base.py
     -   **Problem**: Currently, servers are stored in a `List[Server[ServerType]]`. Operations like `get_server`, `remove_server`, and `update_server_metrics` require iterating through the list, resulting in O(n) time complexity. This is inefficient for a large number of servers.
     -   **Solution**: Refactor `self.servers` to be a `Dict[str, Server[ServerType]]`, where the key is the `server.id`. This will reduce the lookup, removal, and update times to O(1) on average, significantly improving performance as the server pool scales. This change will require updating all methods that interact with the `self.servers` list.
 
--   [ ] **Efficient Healthy Server Retrieval**:
+-   [x] **Efficient Healthy Server Retrieval**:
     -   **Problem**: The `get_healthy_servers` method iterates through all servers every time it's called. If called frequently, this can be a performance bottleneck.
     -   **Solution**: Maintain a separate `Set[str]` or `Dict[str, Server[ServerType]]` containing only the healthy servers. This set would be updated whenever a server's status changes (via the `on_server_status_updated` hook). This provides an O(1) lookup for the healthy server collection, though it adds a small overhead to status updates.
 
