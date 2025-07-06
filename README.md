@@ -10,7 +10,7 @@ This list focuses exclusively on enhancing the `load_balancer/algorithms/base.py
 
 ### 1. Performance Optimizations
 
--   [ ] **Server Storage Mechanism**:
+-   [x] **Server Storage Mechanism**:
     -   **Problem**: Currently, servers are stored in a `List[Server[ServerType]]`. Operations like `get_server`, `remove_server`, and `update_server_metrics` require iterating through the list, resulting in O(n) time complexity. This is inefficient for a large number of servers.
     -   **Solution**: Refactor `self.servers` to be a `Dict[str, Server[ServerType]]`, where the key is the `server.id`. This will reduce the lookup, removal, and update times to O(1) on average, significantly improving performance as the server pool scales. This change will require updating all methods that interact with the `self.servers` list.
 

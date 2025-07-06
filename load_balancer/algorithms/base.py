@@ -110,6 +110,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         self.name = name
         self.logger = logger or logging.getLogger(self.__class__.__name__)
         self.servers: Dict[str, Server[ServerType]] = {}
+        self.healthy_servers: Dict[str, Server[ServerType]] = {}
         self.statistics = {
             'total_requests': 0,
             'successful_selections': 0,
@@ -138,7 +139,9 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Args:
             server: Server instance to add
         """
-        pass
+        if self._validate_server(server):
+            self.servers[server.id] = server
+            self.on_server_added(server)
     
     @abstractmethod
     def remove_server(self, server_id: str) -> bool:
@@ -151,7 +154,11 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Returns:
             True if server was removed, False if not found
         """
-        pass
+        if server_id in self.servers:
+            del self.servers[server_id]
+            self.on_server_removed(server_id)
+            return True
+        return False
 
     def update_sever_metrics(self, server_id: str, **metrics) -> bool:
         """
@@ -210,7 +217,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Returns:
             List of healthy servers
         """
-        return [server for server in self.servers.values() if server.is_available]
+        return [server for server in self.healthy_servers.values() if server.is_available]
 
     def get_server_count(self) -> int:
         """ Get total number of servers in the pool"""
@@ -258,15 +265,18 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
             server: the server that was added
         """
         self.logger.info(f"Server {server.id} added to {self.name} algorithm")
+        if server.is_available:
+            self.healthy_servers[server.id] = server
 
-    def on_server_removed(self, server: Server[ServerType]) -> None:
+    def on_server_removed(self, server_id: str) -> None:
         """
         Hook for when a server is removed from the pool.
 
         Args:
-            server: the server that was removed
+            server_id: the server that was removed
         """
-        self.logger.info(f"Server {server.id} removed from {self.name} algorithm")
+        self.logger.info(f"Server {server_id} removed from {self.name} algorithm")
+        self.healthy_servers.pop(server_id, None)
 
 
     def on_server_selected(self, server: Server[ServerType], context: Optional[LoadBalancingContext]) -> None 
@@ -304,6 +314,10 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
            new_status: New server status
         """
         self.logger.info(f"Server {server.id} status updated to {new_status.value} from {old_status.value}")
+        if new_status == ServerStatus.HEALTHY:
+            self.healthy_servers[server.id] = server
+        elif old_status == ServerStatus.HEALTHY:
+            self.healthy_servers.pop(server.id, None)
 
     def on_server_metrics_updated(self, server: Server[ServerType]]) -> None:
         """
