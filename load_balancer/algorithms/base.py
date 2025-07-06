@@ -181,13 +181,14 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Returns:
             True if server was found and updated, False otherwise
         """
-        server = self.get_server(server_id)
+        with self._lock:
+            server = self.get_server(server_id)
 
-        if server:
-            server.update_metrics(**metrics)
-            self.on_server_metrics_updated(server)
-            return True
-        return False
+            if server:
+                server.update_metrics(**metrics)
+                self.on_server_metrics_updated(server)
+                return True
+            return False
 
     def update_server_status(self, server_id: str, status: ServerStatus) -> bool:
         """
@@ -200,13 +201,14 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Returns:
             True if server was found and updated, False otherwise
         """
-        server = self.get_server(server_id)
-        if server:
-            old_status = server.status
-            server.status = status
-            self.on_server_status_updated(server, old_status, status)
-            return True
-        return False
+        with self._lock:
+            server = self.get_server(server_id)
+            if server:
+                old_status = server.status
+                server.status = status
+                self.on_server_status_updated(server, old_status, status)
+                return True
+            return False
 
     def get_server(self, server_id: str) -> Optional[Server[ServerType]]:
         """
@@ -218,7 +220,8 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Returns:
             Server instance or None if not found
         """
-        return self.servers.get(server_id)
+        with self._lock:
+            return self.servers.get(server_id)
 
     def get_healthy_servers(self) -> List[Server[ServerType]]:
         """
@@ -227,25 +230,29 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Returns:
             List of healthy servers
         """
-        return [server for server in self.healthy_servers.values() if server.is_available]
+        with self._lock:
+            return [server for server in self.healthy_servers.values() if server.is_available]
 
     def get_server_count(self) -> int:
         """ Get total number of servers in the pool"""
-        return len(self.servers)
+        with self._lock:
+            return len(self.servers)
 
     def get_healthy_server_count(self) -> int:
         """ Get total number of healthy servers in the pool"""
-        return len(self.get_healthy_servers())
+        with self._lock:
+            return len(self.get_healthy_servers())
 
     def reset_statistics(self) -> None:
         """Resets algo statistics"""
-        self.statistics = {
-                'total_requests': 0,
-                'successful_selections': 0,
-                'failed_selections': 0,
-                'last_reset': time.time(),
-        }
-        self.on_statistics_reset()
+        with self._lock:
+            self.statistics = {
+                    'total_requests': 0,
+                    'successful_selections': 0,
+                    'failed_selections': 0,
+                    'last_reset': time.time(),
+            }
+            self.on_statistics_reset()
 
     def get_statistics(self) -> Dict[str,Any]:
         """
@@ -254,16 +261,16 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Returns:
             Dictionary containing algorithm statistics        
         """
-
-        stats = self.statistics.copy()
-        stats['success_rate'] = ( 
-                stats['successful_selections'] / max(stats['total_requests'], 1 )
-        )        
-        stats['algorithm_name'] = self.name
-        stats['server_count'] = self.get_server_count()
-        stats['healthy_server_count'] = self.get_healthy_server_count()
-        
-        return stats
+        with self._lock:
+            stats = self.statistics.copy()
+            stats['success_rate'] = ( 
+                    stats['successful_selections'] / max(stats['total_requests'], 1 )
+            )        
+            stats['algorithm_name'] = self.name
+            stats['server_count'] = self.get_server_count()
+            stats['healthy_server_count'] = self.get_healthy_server_count()
+            
+            return stats
 
     # Hooks
 
@@ -274,9 +281,10 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Args:
             server: the server that was added
         """
-        self.logger.info(f"Server {server.id} added to {self.name} algorithm")
-        if server.is_available:
-            self.healthy_servers[server.id] = server
+        with self._lock:
+            self.logger.info(f"Server {server.id} added to {self.name} algorithm")
+            if server.is_available:
+                self.healthy_servers[server.id] = server
 
     def on_server_removed(self, server_id: str) -> None:
         """
@@ -285,11 +293,12 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Args:
             server_id: the server that was removed
         """
-        self.logger.info(f"Server {server_id} removed from {self.name} algorithm")
-        self.healthy_servers.pop(server_id, None)
+        with self._lock:
+            self.logger.info(f"Server {server_id} removed from {self.name} algorithm")
+            self.healthy_servers.pop(server_id, None)
 
 
-    def on_server_selected(self, server: Server[ServerType], context: Optional[LoadBalancingContext]) -> None 
+    def on_server_selected(self, server: Server[ServerType], context: Optional[LoadBalancingContext]) -> None:
         """
         Hook for when a server is selected.
 
@@ -297,22 +306,22 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
             server: the server that was selected
             context: Request context for the selection
         """
+        with self._lock:
+            self.statistics['total_requests'] += 1
+            self.statistics['successful_selections'] += 1
+            self.logger.info(f"Selected server {server.id} using {self.name} algorithm")
 
-        self.statistics['total_requests'] += 1
-        self.statistics['successful_selections'] += 1
-        self.logger.info(f"Selected server {server.id} using {self.name} algorithm")
-
-    def on_selected_failed(self, context: Optional[LoadBalancingContext]) -> None 
+    def on_selected_failed(self, context: Optional[LoadBalancingContext]) -> None:
         """
         Hook for when a server selection fails.
 
         Args:
             context: Request context for the selection
         """
-
-        self.statistics['total_requests'] += 1
-        self.statistics['failed_selections'] += 1
-        self.logger.info(f"Server selection failed using {self.name} algorithm")
+        with self._lock:
+            self.statistics['total_requests'] += 1
+            self.statistics['failed_selections'] += 1
+            self.logger.info(f"Server selection failed using {self.name} algorithm")
 
     def on_server_status_updated(self, server: Server[ServerType], old_status: ServerStatus, new_status: ServerStatus) -> None:
         """
@@ -323,11 +332,12 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
            old_status: Previous server status
            new_status: New server status
         """
-        self.logger.info(f"Server {server.id} status updated to {new_status.value} from {old_status.value}")
-        if new_status == ServerStatus.HEALTHY:
-            self.healthy_servers[server.id] = server
-        elif old_status == ServerStatus.HEALTHY:
-            self.healthy_servers.pop(server.id, None)
+        with self._lock:
+            self.logger.info(f"Server {server.id} status updated to {new_status.value} from {old_status.value}")
+            if new_status == ServerStatus.HEALTHY:
+                self.healthy_servers[server.id] = server
+            elif old_status == ServerStatus.HEALTHY:
+                self.healthy_servers.pop(server.id, None)
 
     def on_server_metrics_updated(self, server: Server[ServerType]]) -> None:
         """
