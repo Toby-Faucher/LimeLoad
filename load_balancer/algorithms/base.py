@@ -109,7 +109,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
 
         self.name = name
         self.logger = logger or logging.getLogger(self.__class__.__name__)
-        self.servers: List[Server[ServerType]] = []
+        self.servers: Dict[str, Server[ServerType]] = {}
         self.statistics = {
             'total_requests': 0,
             'successful_selections': 0,
@@ -201,10 +201,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Returns:
             Server instance or None if not found
         """
-        for server in self.servers:
-            if server.id == server_id:
-                return server
-        return None
+        return self.servers.get(server_id)
 
     def get_healthy_servers(self) -> List[Server[ServerType]]:
         """
@@ -213,7 +210,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Returns:
             List of healthy servers
         """
-        return [server for server in self.servers if server.is_available]
+        return [server for server in self.servers.values() if server.is_available]
 
     def get_server_count(self) -> int:
         """ Get total number of servers in the pool"""
