@@ -27,8 +27,26 @@ This list focuses exclusively on enhancing the `load_balancer/algorithms/base.py
 ### 3. ABC and API Design Enhancements
 
 -   [ ] **Refine Abstract Method Contracts**:
-    -   **Problem**: The current abstract methods are minimal. Their contracts could be more explicit to guide implementers.
-    -   **Solution**: Review and potentially expand the docstrings for `select_server`, `add_server`, and `remove_server` to be more prescriptive about expected behavior, including edge cases (e.g., what should happen if `add_server` is called with a duplicate server ID?). Consider if any helper methods should also be abstract.
+    -   **Problem**: The current abstract methods (`select_server`, `add_server`, `remove_server`) are minimal. Their contracts are not explicit enough, which can lead to inconsistent behavior in subclasses.
+    -   **Solution**: Flesh out the docstrings and type hinting for each abstract method to create a clear and prescriptive contract for implementers. This includes defining expected behavior, return values, and error conditions for various scenarios.
+        -   **`select_server(context: LoadBalancingContext) -> Server`**:
+            -   **Success Condition**: Must return a healthy `Server` instance from the pool.
+            -   **Failure Condition**: What should happen if no healthy servers are available? The contract should specify whether to:
+                -   Raise a specific exception (e.g., `NoHealthyServersError`).
+                -   Return `None` and let the caller handle it.
+                -   Block until a server becomes available (not recommended for the base contract).
+            -   **Context Usage**: Clarify how the `LoadBalancingContext` should be used. Should the implementation prioritize servers with lower latency, fewer connections, or other metrics contained within the context?
+        -   **`add_server(server: Server)`**:
+            -   **Duplicate Servers**: Define the behavior when a server with a duplicate `server.id` is added. Should it:
+                -   Raise a `ValueError` or a custom `DuplicateServerError`?
+                -   Update the existing server's information?
+                -   Silently ignore the operation? (The contract should explicitly forbid this).
+            -   **Validation**: The contract should state that the server must be validated before being added to the pool. The base class should handle this validation to ensure consistency.
+        -   **`remove_server(server_id: str)`**:
+            -   **Server Not Found**: Specify the behavior if `server_id` does not exist in the server pool. Should it raise a `KeyError` or a custom `ServerNotFoundError`?
+            -   **Return Value**: Define what the method should return on successful removal. Should it be the removed `Server` object or `None`?
+        -   **Helper Methods**:
+            -   Consider if any helper methods, such as `_validate_server` or a potential `_update_server_health`, should be made abstract or have their contracts more clearly defined to ensure subclasses implement them correctly.
 
 -   [ ] **State Management Hooks**:
     -   **Problem**: The hooks (`on_server_added`, etc.) are useful but could be more powerful.
