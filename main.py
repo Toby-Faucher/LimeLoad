@@ -1,66 +1,73 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from backend import Backend
-from pool import ServerPool
+from load_balancer.algorithms.base import LoadBalancingAlgorithm, Server, LoadBalancingContext, ServerStatus
+from typing import Optional, List
 
-class LoadBalancer(BaseHTTPRequestHandler):
-    """
-    A simple HTTP load balancer that distributes incoming requests
-    among a pool of backend servers using a round-robin algorithm.
-    """
-    def do_GET(self):
-        """
-        Handles GET requests by forwarding them to an available backend server.
-        Also handles the /health endpoint for health checks.
-        """
-        if self.path == '/health':
-            self.health_check()
-            return
+class TestAlgorithm(LoadBalancingAlgorithm):
+    def __init__(self):
+        super().__init__(name="TestAlgorithm")
 
-        try:
-            backend = pool.get_next_backend()
-            response = backend.proxy_request(
-                self.command,
-                self.path,
-                headers=self.headers,
-                data=self.rfile.read(int(self.headers.get('Content-Length', 0)))
-            )
-            self.send_response(response.status_code)
-            for key, value in response.headers.items():
-                self.send_header(key, value)
-            self.end_headers()
-            self.wfile.write(response.content)
-        except ConnectionError:
-            self.send_error(503, "Service Unavailable")
-        except Exception as e:
-            self.send_error(500, f"Internal Server Error: {e}")
+    def select_server(self, context: Optional[LoadBalancingContext] = None) -> Optional[Server]:
+        with self._lock:
+            healthy_servers = self.get_healthy_servers()
+            if not healthy_servers:
+                self.on_selected_failed(context)
+                return None
+            
+            # Simple logic: just return the first healthy server
+            server = healthy_servers[0]
+            self.on_server_selected(server, context)
+            return server
 
-    def do_POST(self):
-        """
-        Handles POST requests by calling do_GET.
-        """
-        self.do_GET()
+    def add_server(self, server: Server) -> None:
+        with self._lock:
+            super().add_server(server)
 
-    def health_check(self):
-        """
-        Performs health checks on all registered backend servers.
-        """
-        for backend in pool.backends:
-            backend.health_check()
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Health checks performed.")
+    def remove_server(self, server_id: str) -> bool:
+        with self._lock:
+            return super().remove_server(server_id)
 
-backends = [Backend(url="http://localhost:8081"), Backend(url="http://localhost:8082")]
-pool = ServerPool(backends=backends)
+if __name__ == "__main__":
+    print("Testing Load Balancer Setup")
 
-def main():
-    """
-    Starts the load balancer server.
-    """
-    server_address = ('', 8080)
-    httpd = HTTPServer(server_address, LoadBalancer)
-    print(f"Load balancer running on port {server_address[1]}...")
-    httpd.serve_forever()
+    # 1. Create a load balancing algorithm instance
+    lb = TestAlgorithm()
+    print(f"Initialized Algorithm: {lb}")
 
-if __name__ == '__main__':
-    main()
+    # 2. Create server instances
+    server1 = Server(id="server1", address="192.168.1.10", port=8080)
+    server2 = Server(id="server2", address="192.168.1.11", port=8080, status=ServerStatus.UNHEALTHY)
+    server3 = Server(id="server3", address="192.168.1.12", port=8080)
+
+    print(f"\nCreated servers:\n- {server1}\n- {server2}\n- {server3}")
+
+    # 3. Add servers to the load balancer
+    lb.add_server(server1)
+    lb.add_server(server2)
+    lb.add_server(server3)
+
+    print(f"\nServers added to the pool. Total servers: {lb.get_server_count()}")
+    print(f"Healthy servers: {lb.get_healthy_server_count()}")
+    print(f"Healthy server list: {[s.id for s in lb.get_healthy_servers()]}")
+
+
+    # 4. Select a server
+    print("\nSelecting a server...")
+    selected_server = lb.select_server()
+    if selected_server:
+        print(f"Selected server: {selected_server.id} ({selected_server.endpoint})")
+    else:
+        print("No server was selected.")
+        
+    # 5. Test server removal
+    print(f"\nRemoving server: {server1.id}")
+    lb.remove_server(server1.id)
+    print(f"Healthy servers after removal: {lb.get_healthy_server_count()}")
+
+    print("\nSelecting a server again...")
+    selected_server = lb.select_server()
+    if selected_server:
+        print(f"Selected server: {selected_server.id} ({selected_server.endpoint})")
+    else:
+        print("No server was selected.")
+
+    print("\nTesting statistics:")
+    print(lb.get_statistics())
