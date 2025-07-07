@@ -6,6 +6,13 @@ import time
 import logging
 import threading
 
+from .error import (
+    NoHealthyServersError,
+    ServerNotFoundError,
+    ServerAlreadyExistsError,
+    InvalidServerConfigurationError,
+)
+
 
 ServerType = TypeVar('ServerType')
 
@@ -135,9 +142,9 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         with self._lock:
             healthy = self.get_healthy_servers()
             if not healthy:
-                return None
+                raise NoHealthyServersError("No healthy servers available")
             
-            #TODO: IMPLEMENT SELECTION LOGIC!!!
+            raise NotImplementedError("Subclasses should implement selection logic")
 
     @abstractmethod
     def add_server(self, server: Server[ServerType]) -> None:
@@ -148,9 +155,13 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
             server: Server instance to add
         """
         with self._lock:
-            if self._validate_server(server):
-                self.servers[server.id] = server
-                self.on_server_added(server)
+            if not self._validate_server(server):
+                raise InvalidServerConfigurationError(f"Invalid configuration for server {server.id}")
+            if server.id in self.servers:
+                raise ServerAlreadyExistsError(f"Server {server.id} already exists")
+            
+            self.servers[server.id] = server
+            self.on_server_added(server)
     
     @abstractmethod
     def remove_server(self, server_id: str) -> bool:
@@ -164,11 +175,12 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
             True if server was removed, False if not found
         """
         with self._lock:
-            if server_id in self.servers:
-                del self.servers[server_id]
-                self.on_server_removed(server_id)
-                return True
-            return False
+            if server_id not in self.servers:
+                raise ServerNotFoundError(f"Server {server_id} not found")
+
+            del self.servers[server_id]
+            self.on_server_removed(server_id)
+            return True
 
     def update_sever_metrics(self, server_id: str, **metrics) -> bool:
         """
@@ -188,7 +200,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
                 server.update_metrics(**metrics)
                 self.on_server_metrics_updated(server)
                 return True
-            return False
+            raise ServerNotFoundError(f"Server {server_id} not found")
 
     def update_server_status(self, server_id: str, status: ServerStatus) -> bool:
         """
@@ -208,7 +220,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
                 server.status = status
                 self.on_server_status_updated(server, old_status, status)
                 return True
-            return False
+            raise ServerNotFoundError(f"Server {server_id} not found")
 
     def get_server(self, server_id: str) -> Optional[Server[ServerType]]:
         """
@@ -221,6 +233,8 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
             Server instance or None if not found
         """
         with self._lock:
+            if server_id not in self.servers:
+                raise ServerNotFoundError(f"Server {server_id} not found")
             return self.servers.get(server_id)
 
     def get_healthy_servers(self) -> List[Server[ServerType]]:
@@ -339,7 +353,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
             elif old_status == ServerStatus.HEALTHY:
                 self.healthy_servers.pop(server.id, None)
 
-    def on_server_metrics_updated(self, server: Server[ServerType]]) -> None:
+    def on_server_metrics_updated(self, server: Server[ServerType]) -> None:
         """
         Hook called when a server's metrics are updated.
         
@@ -366,9 +380,9 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
             True if server is valid, False otherwise
         """
         if not server.id or not server.address or server.port <= 0:
-            return False
+            raise InvalidServerConfigurationError("Server ID, address, and port are required")
         if server.weight < 0:
-            return False
+            raise InvalidServerConfigurationError("Server weight cannot be negative")
         return True
 
     def _log_section(self, server: Optional[Server[ServerType]], context: Optional[LoadBalancingContext]) -> None:
