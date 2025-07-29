@@ -98,12 +98,6 @@ class LoadBalancingContext:
     retry_count: int = 0
     metadata: Dict[ str, Any ] = field( default_factory = dict )
 
-    def __post_init__(self):
-        if self.request_headers is None:
-            self.request_headers = {}
-        if self.metadata is None:
-            self.metadata = {}
-
 
 class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
     """
