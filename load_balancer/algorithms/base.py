@@ -54,10 +54,14 @@ class Server(Generic[ServerType]):
     address: str
     port: int
     weight: float = 1.0
+    base_weight: float = 1.0
     status: ServerStatus = ServerStatus.HEALTHY
     metrics: ServerMetrics = field( default_factory = ServerMetrics)
     metadata: Dict[ str, Any ] = field( default_factory = dict)
     
+    def __post_init__(self):
+        self.base_weight = self.weight
+
     @property
     def is_available(self) -> bool:
         """Checks if the server is available to handle requests"""
@@ -183,7 +187,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
             self.on_server_removed(server_id)
             return True
 
-    def update_sever_metrics(self, server_id: str, **metrics) -> bool:
+    def update_server_metrics(self, server_id: str, **metrics) -> bool:
         """
         Update metrics for a specific server.
         
@@ -246,7 +250,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
             List of healthy servers
         """
         with self._lock:
-            return [server for server in self.healthy_servers.values() if server.is_available]
+            return list(self.healthy_servers.values())
 
     def get_server_count(self) -> int:
         """ Get total number of servers in the pool"""
@@ -256,7 +260,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
     def get_healthy_server_count(self) -> int:
         """ Get total number of healthy servers in the pool"""
         with self._lock:
-            return len(self.get_healthy_servers())
+            return len(self.healthy_servers)
 
     def reset_statistics(self) -> None:
         """Resets algo statistics"""
@@ -347,6 +351,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
            old_status: Previous server status
            new_status: New server status
         """
+        #TODO: implement a quarantine system
         with self._lock:
             self.logger.info(f"Server {server.id} status updated to {new_status.value} from {old_status.value}")
             if new_status == ServerStatus.HEALTHY:
@@ -361,7 +366,20 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Args:
             server: The server whose metrics were updated
         """
-        pass # override in subclass if needed
+        #TODO: dynamic weighting
+
+        health_score = self._calculate_health_score(server.metrics)
+
+        new_dynamic_weight = server.base_weight * health_score
+
+        #HACK: Might cause some issues
+        # the reason for this is to prevent the weight going to zero.
+        server.weight = max(new_dynamic_weight, 0.1)
+
+        self.logger.info(
+            "Server {server.id} health score: {health_score:.2f}. "
+            f"Adjusted weight from {server.base_weight} to {server.weight:.2f}."
+        )
 
     def on_statistics_reset(self) -> None:
         """Hook for when the statistics are reset"""
@@ -386,7 +404,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
             raise InvalidServerConfigurationError("Server weight cannot be negative")
         return True
 
-    def _log_section(self, server: Optional[Server[ServerType]], context: Optional[LoadBalancingContext]) -> None:
+    def _log_selection(self, server: Optional[Server[ServerType]], context: Optional[LoadBalancingContext]) -> None:
         """
         Log the server selection result.
         
@@ -399,6 +417,22 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         else:
             self.on_selected_failed(context)
 
+    def _calculate_health_score(self, metrics: ServerMetrics) -> float:
+
+        #TODO: Implement config
+        MAX_RESPONSE_TIME = 2.0  # 2 seconds
+        MAX_ERROR_RATE = 0.1  # 10%
+        MAX_CPU_USAGE = 0.9  # 90%
+
+        rt_penalty = min(metrics.response_time / MAX_RESPONSE_TIME, 1.0)
+        err_penalty = min(metrics.error_rate / MAX_ERROR_RATE, 1.0)
+        cpu_penalty = min(metrics.cpu_usage / MAX_CPU_USAGE, 1.0)
+
+        total_penalty = (rt_penalty + err_penalty + cpu_penalty) / 3.0
+
+        health_score = 1.0 - total_penalty
+
+        return health_score
     def __str__(self) -> str:
         """String representation of the algorithm."""
         return f"{self.name} (servers: {self.get_server_count()}, healthy: {self.get_healthy_server_count()})"
