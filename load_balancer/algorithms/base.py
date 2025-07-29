@@ -7,6 +7,7 @@ import logging
 import threading
 
 from .error import (
+    InvalidMetricKeyError,
     NoHealthyServersError,
     ServerNotFoundError,
     ServerAlreadyExistsError,
@@ -57,10 +58,6 @@ class Server(Generic[ServerType]):
     metrics: ServerMetrics = field( default_factory = ServerMetrics)
     metadata: Dict[ str, Any ] = field( default_factory = dict)
     
-    def __post_init__(self):
-        if self.metrics is None:
-            self.metrics = ServerMetrics()
-
     @property
     def is_available(self) -> bool:
         """Checks if the server is available to handle requests"""
@@ -77,7 +74,17 @@ class Server(Generic[ServerType]):
         for key, value in kwargs.items():
             if hasattr(self.metrics, key):
                 setattr(self.metrics, key, value)
-            self.metrics.last_updated = time.time()
+            else:
+                raise InvalidMetricKeyError("Invalid Argument Passed")
+        self.metrics.last_updated = time.time()
+
+    def __eq__(self, other):
+        if not isinstance(other, Server):
+            return NotImplemented
+        return self.id == other.id
+    
+    def __hash__(self):
+        return hash(self.id)
 
 @dataclass
 class LoadBalancingContext:

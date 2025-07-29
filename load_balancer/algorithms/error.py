@@ -33,6 +33,9 @@ class ServerAlreadyExistsError(ServerError):
 class InvalidServerConfigurationError(ServerError):
     """Raised when a server's configuration is invalid."""
 
+class InvalidMetricKeyError(ServerError):
+    """Raised when an invalid metric key is provided."""
+
 class AlgorithmError(BaseLoadBalancingError):
     """Base exception for algorithm-specific errors."""
 
