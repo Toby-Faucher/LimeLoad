@@ -17,7 +17,7 @@
 - [x] Test server hashing
 
 ## ServerMetrics
-- [ ] Test `is_stale` method
+- [x] Test `is_stale` method
 
 ## LoadBalancingAlgorithm
 - [ ] Test adding a server that already exists
