@@ -5,11 +5,10 @@
 - [x] Test loading a missing config file
 - [x] Test loading a config file with invalid JSON
 - [x] Test loading a config file with missing keys
-- [ ] Test loading an empty config file
-- [ ] Test loading a config file with incorrect permissions
+- [x] Test loading an empty config file
+- [x] Test loading a config file with incorrect permissions
 - [ ] Test loading a config file that is a directory
-- [ ] Test loading a config file with an empty JSON object
-- [ ] Test loading a config file with incorrect data types
+- [x] Test loading a config file with incorrect data types
 
 ## Server
 - [ ] Test creating a server with a weight

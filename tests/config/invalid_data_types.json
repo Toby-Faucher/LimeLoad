@@ -1,0 +1,22 @@
+{
+  "fastapi": {
+    "host": 127001,
+    "port": "8000"
+  },
+  "load_balancer": {
+    "algorithm": 123,
+    "servers": {
+      "server1": "http://localhost:8081",
+      "server2": "http://localhost:8082"
+    }
+  },
+  "health_checks": {
+    "interval": "60",
+    "timeout": "10",
+    "threshold": "30"
+  },
+  "dynamic_weighting": {
+    "max_cpu_usage": "80",
+    "min_memory_available": "512"
+  }
+}
