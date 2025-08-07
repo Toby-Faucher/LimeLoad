@@ -75,8 +75,6 @@ class Server(Generic[ServerType]):
     metrics: ServerMetrics = field( default_factory = ServerMetrics)
     metadata: Dict[ str, Any ] = field( default_factory = dict)
 
-    def __post_init__(self):
-        self.base_weight = self.weight
 
     @property
     def is_available(self) -> bool:
@@ -106,7 +104,7 @@ class Server(Generic[ServerType]):
     def __hash__(self):
         return hash(self.id)
 
-@dataclass
+@dataclass(frozen=True)
 class LoadBalancingContext:
     """Context info for LB decisions"""
     client_ip: Optional[str] = None

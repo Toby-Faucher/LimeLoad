@@ -11,10 +11,10 @@
 - [x] Test loading a config file with incorrect data types
 
 ## Server
-- [ ] Test creating a server with a weight
-- [ ] Test creating a server with metadata
-- [ ] Test server equality
-- [ ] Test server hashing
+- [x] Test creating a server with a weight
+- [x] Test creating a server with metadata
+- [x] Test server equality
+- [x] Test server hashing
 
 ## ServerMetrics
 - [ ] Test `is_stale` method
