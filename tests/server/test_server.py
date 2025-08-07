@@ -38,3 +38,25 @@ def test_server_metadata():
         "data_center": "us-east-1a",
         "instance_type": "t2.micro"
     }
+
+def test_server_equality():
+    server1 = Server(id="test", address="localhost", port=8080)
+    server2 = Server(id="test", address="127.0.0.1", port=8000)
+    server3 = Server(id="another", address="localhost", port=8080)
+
+    assert server1 == server2
+    assert server1 != server3
+    assert server2 != server3
+    assert server1 != "not_a_server"
+
+
+def test_server_hashing():
+    server1 = Server(id="test", address="localhost", port=8080)
+    server2 = Server(id="test", address="127.0.0.1", port=8000)
+    server3 = Server(id="another", address="localhost", port=8080)
+
+    assert hash(server1) == hash(server2)
+    assert hash(server1) != hash(server3)
+
+    server_set = {server1, server2, server3}
+    assert len(server_set) == 2
