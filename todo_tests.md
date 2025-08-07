@@ -7,7 +7,7 @@
 - [x] Test loading a config file with missing keys
 - [x] Test loading an empty config file
 - [x] Test loading a config file with incorrect permissions
-- [ ] Test loading a config file that is a directory
+- [x] Test loading a config file that is a directory
 - [x] Test loading a config file with incorrect data types
 
 ## Server
