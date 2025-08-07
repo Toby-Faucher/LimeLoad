@@ -1,7 +1,7 @@
 # Todo Tests
 
 ## Config
-- [ ] Test loading a valid config file
+- [x] Test loading a valid config file
 - [ ] Test loading a missing config file
 - [ ] Test loading a config file with invalid JSON
 - [ ] Test loading a config file with missing keys
