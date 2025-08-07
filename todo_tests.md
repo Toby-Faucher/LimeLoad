@@ -2,9 +2,9 @@
 
 ## Config
 - [x] Test loading a valid config file
-- [ ] Test loading a missing config file
-- [ ] Test loading a config file with invalid JSON
-- [ ] Test loading a config file with missing keys
+- [x] Test loading a missing config file
+- [x] Test loading a config file with invalid JSON
+- [x] Test loading a config file with missing keys
 
 ## Server
 - [ ] Test creating a server with a weight

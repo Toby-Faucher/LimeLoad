@@ -1,0 +1,12 @@
+{
+  "health_checks": {
+    "threshold": 30.0
+  },
+  "dynamic_weighting": {
+    "max_response_time": 2.0,
+    "max_error_rate": 0.1
+  },
+  "fastapi": {
+    "host": "0.0.0.0"
+  }
+}
