@@ -57,7 +57,6 @@ class ServerMetrics:
         if self.last_updated == 0.0:
             self.last_updated = time.time()
 
-    @property
     def is_stale(self, threshold: float = health_check_threshold) -> bool:
         """Check if metrics are stale based on 30 second threshold"""
         return time.time() - self.last_updated > threshold
