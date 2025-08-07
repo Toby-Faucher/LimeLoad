@@ -14,7 +14,18 @@ from .error import (
     InvalidServerConfigurationError,
 )
 
+from config import load_config
 
+config = load_config()
+
+health_check_threshold = config.get('health_check').get('threshold')
+
+fast_api_host = config.get('fastapi').get('host')
+fast_api_port = config.get('fastapi').get('port')
+
+dynamic_weighting_max_response_time = config.get('dynamic_weighting').get('max_response_time')
+dynamic_weighting_max_error_rate = config.get('dynamic_weighting').get('max_error_rate')
+dynamic_weighting_max_cpu_usage = config.get('dynamic_weighting').get('max_cpu_usage')
 ServerType = TypeVar('ServerType')
 
 class ServerStatus(Enum):
@@ -39,12 +50,11 @@ class ServerMetrics:
     def __post_init__(self):
         if self.last_updated == 0.0:
             self.last_updated = time.time()
-    
+
     @property
-    def is_stale(self, threshold: float = 30.0) -> bool:
+    def is_stale(self, threshold: float = health_check_threshold) -> bool:
         """Check if metrics are stale based on 30 second threshold"""
-        # TODO: When the config file structure is created make the threshold changable
-        return time.time() - self.last_updated > threshold 
+        return time.time() - self.last_updated > threshold
 
 
 @dataclass
@@ -58,7 +68,7 @@ class Server(Generic[ServerType]):
     status: ServerStatus = ServerStatus.HEALTHY
     metrics: ServerMetrics = field( default_factory = ServerMetrics)
     metadata: Dict[ str, Any ] = field( default_factory = dict)
-    
+
     def __post_init__(self):
         self.base_weight = self.weight
 
@@ -74,7 +84,7 @@ class Server(Generic[ServerType]):
 
     def update_metrics(self, **kwargs) -> None:
         """Update the servs metrics with new values"""
-            
+
         for key, value in kwargs.items():
             if hasattr(self.metrics, key):
                 setattr(self.metrics, key, value)
@@ -86,7 +96,7 @@ class Server(Generic[ServerType]):
         if not isinstance(other, Server):
             return NotImplemented
         return self.id == other.id
-    
+
     def __hash__(self):
         return hash(self.id)
 
@@ -143,12 +153,12 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
         Returns:
             Selected Server or None if no servers are available
         """
-        
+
         with self._lock:
             healthy = self.get_healthy_servers()
             if not healthy:
                 raise NoHealthyServersError("No healthy servers available")
-            
+
             raise NotImplementedError("Subclasses should implement selection logic")
 
     @abstractmethod
@@ -164,10 +174,10 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
                 raise InvalidServerConfigurationError(f"Invalid configuration for server {server.id}")
             if server.id in self.servers:
                 raise ServerAlreadyExistsError(f"Server {server.id} already exists")
-            
+
             self.servers[server.id] = server
             self.on_server_added(server)
-    
+
     @abstractmethod
     def remove_server(self, server_id: str) -> bool:
         """
@@ -190,11 +200,11 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
     def update_server_metrics(self, server_id: str, **metrics) -> bool:
         """
         Update metrics for a specific server.
-        
+
         Args:
             server_id: ID of the server to update
             **metrics: Metric key-value pairs to update
-            
+
         Returns:
             True if server was found and updated, False otherwise
         """
@@ -210,11 +220,11 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
     def update_server_status(self, server_id: str, status: ServerStatus) -> bool:
         """
         Update the status of a specific server.
-        
+
         Args:
             server_id: ID of the server to update
             status: New server status
-            
+
         Returns:
             True if server was found and updated, False otherwise
         """
@@ -230,10 +240,10 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
     def get_server(self, server_id: str) -> Optional[Server[ServerType]]:
         """
         Get a server by its ID.
-        
+
         Args:
             server_id: ID of the server to retrieve
-            
+
         Returns:
             Server instance or None if not found
         """
@@ -245,7 +255,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
     def get_healthy_servers(self) -> List[Server[ServerType]]:
         """
         Get list of healthy servers available for load balancing.
-        
+
         Returns:
             List of healthy servers
         """
@@ -276,19 +286,19 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
     def get_statistics(self) -> Dict[str,Any]:
         """
         Get algorithm statistics.
-        
+
         Returns:
-            Dictionary containing algorithm statistics        
+            Dictionary containing algorithm statistics
         """
         with self._lock:
             stats = self.statistics.copy()
-            stats['success_rate'] = ( 
+            stats['success_rate'] = (
                     stats['successful_selections'] / max(stats['total_requests'], 1 )
-            )        
+            )
             stats['algorithm_name'] = self.name
             stats['server_count'] = self.get_server_count()
             stats['healthy_server_count'] = self.get_healthy_server_count()
-            
+
             return stats
 
     # Hooks
@@ -362,11 +372,10 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
     def on_server_metrics_updated(self, server: Server[ServerType]) -> None:
         """
         Hook called when a server's metrics are updated.
-        
+
         Args:
             server: The server whose metrics were updated
         """
-        #TODO: dynamic weighting
 
         health_score = self._calculate_health_score(server.metrics)
 
@@ -383,7 +392,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
 
     def on_statistics_reset(self) -> None:
         """Hook for when the statistics are reset"""
-        
+
         self.logger.info(f"Server statistics reset for {self.name} algorithm")
 
     # Util methods
@@ -391,10 +400,10 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
     def _validate_server(self, server: Server[ServerType]) -> bool:
         """
         Validate server configuration.
-        
+
         Args:
             server: Server to validate
-            
+
         Returns:
             True if server is valid, False otherwise
         """
@@ -407,7 +416,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
     def _log_selection(self, server: Optional[Server[ServerType]], context: Optional[LoadBalancingContext]) -> None:
         """
         Log the server selection result.
-        
+
         Args:
             server: Selected server (None if selection failed)
             context: Request context
@@ -419,10 +428,9 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
 
     def _calculate_health_score(self, metrics: ServerMetrics) -> float:
 
-        #TODO: Implement config
-        MAX_RESPONSE_TIME = 2.0  # 2 seconds
-        MAX_ERROR_RATE = 0.1  # 10%
-        MAX_CPU_USAGE = 0.9  # 90%
+        MAX_RESPONSE_TIME = dynamic_weighting_max_response_time
+        MAX_ERROR_RATE = dynamic_weighting_max_error_rate
+        MAX_CPU_USAGE = dynamic_weighting_max_cpu_usage
 
         rt_penalty = min(metrics.response_time / MAX_RESPONSE_TIME, 1.0)
         err_penalty = min(metrics.error_rate / MAX_ERROR_RATE, 1.0)
