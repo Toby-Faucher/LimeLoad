@@ -20,15 +20,23 @@
 - [x] Test `is_stale` method
 
 ## LoadBalancingAlgorithm
-- [ ] Test adding a server that already exists
-- [ ] Test removing a server that does not exist
-- [ ] Test updating metrics for a server that does not exist
-- [ ] Test updating status for a server that does not exist
-- [ ] Test getting a server that does not exist
-- [ ] Test selecting a server with no healthy servers
-- [ ] Test resetting statistics
-- [ ] Test `_validate_server` with an invalid server
-- [ ] Test `on_server_metrics_updated` hook
+- [x] Test adding a server that already exists
+- [x] Test removing a server that does not exist
+- [x] Test updating metrics for a server that does not exist
+- [x] Test updating status for a server that does not exist
+- [x] Test getting a server that does not exist
+- [x] Test selecting a server with no healthy servers
+- [x] Test resetting statistics
+- [x] Test `_validate_server` with an invalid server
+- [x] Test `on_server_metrics_updated` hook
+- [x] Test basic algorithm initialization
+- [x] Test adding servers normally
+- [x] Test removing servers normally
+- [x] Test server selection with healthy servers
+- [x] Test server selection with context
+- [x] Test algorithm statistics tracking
+- [x] Test multiple server handling
+- [x] Test server status updates
 
 ## Health Checker
 - [ ] Test a successful health check

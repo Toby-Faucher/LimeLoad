@@ -158,3 +158,107 @@ def test_server_status_update():
     # Update server status back to healthy
     test_lb.update_server_status("server1", ServerStatus.HEALTHY)
     assert test_lb.get_healthy_server_count() == 1
+
+
+def test_add_server_that_already_exists():
+    from load_balancer.algorithms.error import ServerAlreadyExistsError
+
+    test_lb = ConcreteLoadBalancingAlgorithm("Test")
+    server = Server(id="server1", address="localhost", port=8080)
+
+    test_lb.add_server(server)
+    assert test_lb.get_server_count() == 1
+
+    # Adding the same server again should raise exception
+    with pytest.raises(ServerAlreadyExistsError):
+        test_lb.add_server(server)
+
+
+def test_remove_server_that_does_not_exist():
+    from load_balancer.algorithms.error import ServerNotFoundError
+
+    test_lb = ConcreteLoadBalancingAlgorithm("Test")
+
+    # Try to remove a server that doesn't exist - should raise exception
+    with pytest.raises(ServerNotFoundError):
+        test_lb.remove_server("nonexistent")
+
+
+def test_updating_metrics_for_nonexistent_server():
+    from load_balancer.algorithms.error import ServerNotFoundError
+
+    test_lb = ConcreteLoadBalancingAlgorithm("Test")
+
+    # Try to update metrics for a server that doesn't exist
+    with pytest.raises(ServerNotFoundError):
+        test_lb.update_server_metrics("nonexistent", response_time=100.0)
+
+
+def test_updating_status_for_nonexistent_server():
+    from load_balancer.algorithms.base import ServerStatus
+    from load_balancer.algorithms.error import ServerNotFoundError
+
+    test_lb = ConcreteLoadBalancingAlgorithm("Test")
+
+    # Try to update status for a server that doesn't exist
+    with pytest.raises(ServerNotFoundError):
+        test_lb.update_server_status("nonexistent", ServerStatus.UNHEALTHY)
+
+
+def test_getting_server_that_does_not_exist():
+    from load_balancer.algorithms.error import ServerNotFoundError
+
+    test_lb = ConcreteLoadBalancingAlgorithm("Test")
+
+    # Try to get a server that doesn't exist
+    with pytest.raises(ServerNotFoundError):
+        test_lb.get_server("nonexistent")
+
+
+def test_resetting_statistics():
+    test_lb = ConcreteLoadBalancingAlgorithm("Test")
+    server = Server(id="server1", address="localhost", port=8080)
+
+    test_lb.add_server(server)
+    test_lb.select_server()  # Generate some stats
+
+    initial_stats = test_lb.get_statistics()
+    assert initial_stats['total_requests'] == 1
+    assert initial_stats['successful_selections'] == 1
+
+    # Reset statistics
+    test_lb.reset_statistics()
+
+    reset_stats = test_lb.get_statistics()
+    assert reset_stats['total_requests'] == 0
+    assert reset_stats['successful_selections'] == 0
+    assert reset_stats['failed_selections'] == 0
+
+
+def test_validate_server_with_invalid_server():
+    from load_balancer.algorithms.error import InvalidServerConfigurationError
+
+    test_lb = ConcreteLoadBalancingAlgorithm("Test")
+
+    # Create server with invalid configuration (negative port)
+    invalid_server = Server(id="invalid", address="localhost", port=-1)
+
+    # The _validate_server method should raise exception for invalid servers
+    with pytest.raises(InvalidServerConfigurationError):
+        test_lb._validate_server(invalid_server)
+
+
+def test_on_server_metrics_updated_hook():
+    test_lb = ConcreteLoadBalancingAlgorithm("Test")
+    server = Server(id="server1", address="localhost", port=8080)
+
+    test_lb.add_server(server)
+
+    # Update metrics and test the hook is called
+    test_lb.update_server_metrics("server1", response_time=50.0, cpu_usage=25.0)
+
+    # Verify the metrics were updated
+    retrieved_server = test_lb.get_server("server1")
+    assert retrieved_server is not None
+    assert retrieved_server.metrics.response_time == 50.0
+    assert retrieved_server.metrics.cpu_usage == 25.0
