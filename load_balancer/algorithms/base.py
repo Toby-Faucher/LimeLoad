@@ -14,7 +14,7 @@ from .error import (
     InvalidServerConfigurationError,
 )
 
-from config import load_config
+from ..config import load_config
 
 import os
 

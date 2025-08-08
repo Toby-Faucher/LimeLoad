@@ -227,15 +227,15 @@ class TestFastAPIEndpoints:
 
         response = self.client.get("/health/server1")
         assert response.status_code == 500
-        assert "Load balancer not initialized" in response.json()["detail"]
+        assert "Load balancer is not initialized." in response.json()["detail"]
 
         response = self.client.post("/select-server")
         assert response.status_code == 500
-        assert "Load balancer not initialized" in response.json()["detail"]
+        assert "Load balancer is not initialized." in response.json()["detail"]
 
         response = self.client.get("/servers")
         assert response.status_code == 500
-        assert "Load balancer not initialized" in response.json()["detail"]
+        assert "Load balancer is not initialized." in response.json()["detail"]
 
     def test_select_server_post_with_metadata(self):
         """Test POST /select-server with metadata"""

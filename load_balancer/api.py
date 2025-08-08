@@ -2,30 +2,71 @@ from fastapi import FastAPI, HTTPException, Request, Depends
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 import logging
+import urllib.parse
 
 from .algorithms.base import LoadBalancingAlgorithm, Server, LoadBalancingContext, ServerStatus
 from .algorithms.error import ServerNotFoundError, HealthCheckFailedError
 from .health_checker import check_server_health
+from .config import load_config
 
 app = FastAPI(title="LimeLoad API", version="1.0.0")
 logger = logging.getLogger(__name__)
 
-# Global load balancer instance - in production this would be dependency injected
-_load_balancer: Optional[LoadBalancingAlgorithm] = None
+class LoadBalancerService:
+    def __init__(self):
+        self._load_balancer: Optional[LoadBalancingAlgorithm] = None
+        self._config = load_config()
 
+    def get_load_balancer(self) -> LoadBalancingAlgorithm:
+        if self._load_balancer is None:
+            self._load_balancer = self._create_from_config()
+        return self._load_balancer
+
+    def _create_from_config(self) -> LoadBalancingAlgorithm:
+        algorithm_type = self._config.get('load_balancer', {}).get('algorithm', 'test')
+
+        if algorithm_type == 'test':
+            # Import from main.py at project root
+            import sys
+            import os
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+            from main import TestAlgorithm
+            lb = TestAlgorithm()
+        else:
+            raise ValueError(f"Unknown algorithm: {algorithm_type}")
+
+        # Add servers from config
+        servers_config = self._config.get('load_balancer', {}).get('servers', {})
+        for server_id, server_url in servers_config.items():
+            # Parse server_url (e.g., "http://localhost:8081")
+            parsed = urllib.parse.urlparse(server_url)
+            server = Server(
+                id=server_id,
+                address=parsed.hostname or 'localhost',
+                port=parsed.port or 8080
+            )
+            lb.add_server(server)
+
+        return lb
+
+# Global service instance
+_service = LoadBalancerService()
 
 def get_load_balancer() -> LoadBalancingAlgorithm:
     """Dependency to get the load balancer instance"""
-    global _load_balancer
-    if _load_balancer is None:
-        raise HTTPException(status_code=500, detail="Load balancer not initialized")
-    return _load_balancer
-
+    # If the load balancer was explicitly set to None (e.g., for testing),
+    # then we should raise an error, not try to re-initialize.
+    if _service._load_balancer is None:
+        raise HTTPException(status_code=500, detail="Load balancer is not initialized.")
+    try:
+        return _service.get_load_balancer()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Load balancer initialization failed: {e}")
 
 def set_load_balancer(lb: Optional[LoadBalancingAlgorithm]):
-    """Set the global load balancer instance"""
-    global _load_balancer
-    _load_balancer = lb
+    """Set the global load balancer instance (for testing)"""
+    global _service
+    _service._load_balancer = lb
 
 
 class ServerSelection(BaseModel):
@@ -90,6 +131,8 @@ async def health_check_server(server_id: str, lb: LoadBalancingAlgorithm = Depen
         except ServerNotFoundError:
             raise HTTPException(status_code=404, detail=f"Server {server_id} not found")
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         logger.error(f"Unexpected error checking health for server {server_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
