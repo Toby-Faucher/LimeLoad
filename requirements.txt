@@ -32,6 +32,7 @@ httpx==0.26.0
 idna==3.6
 ifaddr==0.2.0
 IMDbPY==2021.4.18
+iniconfig==1.1.1
 itsdangerous==2.1.2
 Jinja2==3.1.2
 launchpadlib==1.11.0
@@ -57,6 +58,7 @@ packaging==24.0
 PAM==0.4.2
 pexpect==4.9.0
 pillow==10.2.0
+pluggy==1.4.0
 psutil==5.9.8
 ptyprocess==0.7.0
 pyasyncore==1.0.2
@@ -76,6 +78,7 @@ pynvim==0.5.0
 pyparsing==3.1.1
 pyparted==3.12.0
 pypng==0.20231004.0
+pytest==7.4.4
 python-apt==2.7.7+ubuntu4
 python-debian==0.1.49+ubuntu2
 python-gnupg==0.5.2
