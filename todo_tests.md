@@ -39,16 +39,26 @@
 - [x] Test server status updates
 
 ## Health Checker
-- [ ] Test a successful health check
-- [ ] Test a failed health check
-- [ ] Test a health check with an invalid server IP
-- [ ] Test a health check with an invalid server port
+- [x] Test a successful health check
+- [x] Test a failed health check
+- [x] Test a health check with an invalid server IP
+- [x] Test a health check with an invalid server port
+- [x] Test a health check that fails due to HTTP error
+- [x] Test a health check that times out
+- [x] Test health check URL construction
+- [x] Test health check with different host/port combinations
 
 ## FastAPI
-- [ ] Test the `/health/{server_id}` endpoint
-- [ ] Test the `/select-server` endpoint
+- [x] Test the `/health/{server_id}` endpoint
+- [x] Test the `/select-server` endpoint
+- [x] Test the root endpoint
+- [x] Test server listing endpoint
+- [x] Test statistics endpoints
+- [x] Test error handling scenarios
+- [x] Test endpoint parameter validation
+- [x] Test load balancer dependency injection
 
 ## Main
 - [ ] Test that the load balancer is initialized correctly
 - [ ] Test that the servers are added to the load balancer
-- [ ] Test that the FastAPI app is started
+- [x] Test that the FastAPI app is started
