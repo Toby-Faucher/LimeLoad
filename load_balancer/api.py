@@ -87,7 +87,7 @@ class SelectServerRequest(BaseModel):
 @app.get("/")
 async def root():
     """Root endpoint"""
-    return {"message": "Load Balancer API", "status": "running"}
+    return {"message": "LimeLoad API", "status": "running"}
 
 
 @app.get("/health/{server_id}")
