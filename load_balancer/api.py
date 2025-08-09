@@ -23,22 +23,20 @@ class LoadBalancerService:
         return self._load_balancer
 
     def _create_from_config(self) -> LoadBalancingAlgorithm:
-        algorithm_type = self._config.get('load_balancer', {}).get('algorithm', 'test')
+        algorithm_type = self._config.get('load_balancer', {}).get('algorithm')
 
-        if algorithm_type == 'test':
-            # Import from main.py at project root
-            import sys
-            import os
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-            from main import TestAlgorithm
-            lb = TestAlgorithm()
-        else:
-            raise ValueError(f"Unknown algorithm: {algorithm_type}")
+        match algorithm_type:
+            case 'round_robin'
+                import sys
+                import os
+                sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+                from .algorithms.round_robin import RoundRobin
+                lb = RoundRobin()
+            case _:
+                raise ValueError(f"Unknown algorithm: {algorithm_type}")
 
-        # Add servers from config
         servers_config = self._config.get('load_balancer', {}).get('servers', {})
         for server_id, server_url in servers_config.items():
-            # Parse server_url (e.g., "http://localhost:8081")
             parsed = urllib.parse.urlparse(server_url)
             server = Server(
                 id=server_id,
@@ -49,13 +47,10 @@ class LoadBalancerService:
 
         return lb
 
-# Global service instance
 _service = LoadBalancerService()
 
 def get_load_balancer() -> LoadBalancingAlgorithm:
     """Dependency to get the load balancer instance"""
-    # If the load balancer was explicitly set to None (e.g., for testing),
-    # then we should raise an error, not try to re-initialize.
     if _service._load_balancer is None:
         raise HTTPException(status_code=500, detail="Load balancer is not initialized.")
     try:
