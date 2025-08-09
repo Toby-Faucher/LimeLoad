@@ -12,11 +12,20 @@
     "port": 8000
   },
   "load_balancer": {
-    "algorithm": "test",
+    "algorithm": "round_robin",
     "servers": {
-      "server1": "http://localhost:8081",
-      "server2": "http://localhost:8082",
-      "server3": "http://localhost:8083"
+      "server1": {
+        "address": "localhost",
+        "port": 8081
+      },
+      "server2": {
+        "address": "localhost",
+        "port": 8082
+      },
+      "server3": {
+        "address": "localhost",
+        "port": 8083
+      }
     }
   }
 }

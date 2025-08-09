@@ -28,4 +28,10 @@ def load_config(config_path='config.json'):
 
         print(f"Permission denied to access config file '{config_path}'. ({system_note})")
         raise e
+
+    # Read port from environment variable, otherwise use config file
+    port = os.environ.get('PORT')
+    if port:
+        config.setdefault('fastapi', {})['port'] = int(port)
+    
     return config
