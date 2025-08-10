@@ -26,7 +26,7 @@ class LoadBalancerService:
         algorithm_type = self._config.get('load_balancer', {}).get('algorithm')
 
         match algorithm_type:
-            case 'round_robin'
+            case 'round_robin':
                 import sys
                 import os
                 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -236,9 +236,6 @@ async def get_statistics(lb: LoadBalancingAlgorithm = Depends(get_load_balancer)
         stats = lb.get_statistics()
         return {
             "statistics": stats,
-            "algorithm": lb.name,
-            "server_count": lb.get_server_count(),
-            "healthy_server_count": lb.get_healthy_server_count()
         }
     except Exception as e:
         logger.error(f"Error getting statistics: {e}")

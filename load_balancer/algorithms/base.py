@@ -141,7 +141,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
             'total_requests': 0,
             'successful_selections': 0,
             'failed_selections': 0,
-            'last_reset': time.time(),
+            'last_reset': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
         }
         self._lock = threading.RLock()
 
@@ -282,7 +282,7 @@ class LoadBalancingAlgorithm(ABC, Generic[ServerType]):
                     'total_requests': 0,
                     'successful_selections': 0,
                     'failed_selections': 0,
-                    'last_reset': time.time(),
+                    'last_reset': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
             }
             self.on_statistics_reset()
 

@@ -9,7 +9,7 @@
   },
   "fastapi": {
     "host": "0.0.0.0",
-    "port": 8000
+    "port": 10288
   },
   "load_balancer": {
     "algorithm": "round_robin",

@@ -13,13 +13,14 @@ def initialize_load_balancer():
     config = load_config()
     lb_config = config.get("load_balancer", {})
     # Temp
-    algorithm_name = lb_config.get("algorithm", "round_robin")
+    algorithm_name = lb_config.get("algorithm", {})
     servers_config = lb_config.get("servers", {})
     # Switch this to a match statement
-    if algorithm_name == "round_robin":
-        lb = RoundRobin()
-    else:
-        raise ValueError(f"Unknown algorithm: {algorithm_name}")
+    match algorithm_name:
+        case "round_robin":
+            lb = RoundRobin()
+        case _:
+            raise ValueError(f"Unknown algorithm: {algorithm_name}")
 
     for server_id, server_info in servers_config.items():
         server = Server(
