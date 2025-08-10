@@ -1,6 +1,9 @@
 {
   "health_checks": {
-    "threshold": 30.0
+    "enabled": false,
+    "interval": 10,
+    "threshold": 30.0,
+    "timeout": 5.0
   },
   "dynamic_weighting": {
     "max_response_time": 2.0,
@@ -9,7 +12,7 @@
   },
   "fastapi": {
     "host": "0.0.0.0",
-    "port": 10288
+    "port": 10289
   },
   "load_balancer": {
     "algorithm": "round_robin",

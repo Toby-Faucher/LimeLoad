@@ -89,49 +89,6 @@ async def root():
     """Root endpoint"""
     return {"message": "LimeLoad API", "status": "running"}
 
-
-@app.get("/health/{server_id}")
-async def health_check_server(server_id: str, lb: LoadBalancingAlgorithm = Depends(get_load_balancer)):
-    """
-    Check the health of a specific server by server ID
-    """
-    try:
-        server = lb.get_server(server_id)
-        assert server is not None
-
-        health_result = await check_server_health(server.address, server.port)
-
-        return {
-            "server_id": server_id,
-            "server_address": server.address,
-            "server_port": server.port,
-            "status": health_result.get("status", "unknown"),
-            "healthy": True
-        }
-
-    except ServerNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Server {server_id} not found")
-    except HealthCheckFailedError as e:
-        try:
-            server = lb.get_server(server_id)
-            assert server is not None
-            return {
-                "server_id": server_id,
-                "server_address": server.address,
-                "server_port": server.port,
-                "status": "unhealthy",
-                "healthy": False,
-                "error": str(e)
-            }
-        except ServerNotFoundError:
-            raise HTTPException(status_code=404, detail=f"Server {server_id} not found")
-    except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        logger.error(f"Unexpected error checking health for server {server_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
 @app.post("/select-server")
 async def select_server(
     request_data: Optional[SelectServerRequest] = None,
